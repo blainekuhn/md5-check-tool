@@ -5,7 +5,7 @@ It creates two files in the scanned root
     md5_log is the file created after a scan to get the initial md5 values
     md5_log_error will contain any files that don't have the same md5 sum
   If md5_log_error exists it will be deleted before beginning
-  if md5_log does not exist it will be created and populated 
+  if md5_log does not exist it will be created and populated
 
 """
 import os, hashlib, sys, shutil
