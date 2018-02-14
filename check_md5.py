@@ -5,16 +5,17 @@ It creates two files in the scanned root
     md5_log is the file created after a scan to get the initial md5 values
     md5_log_error will contain any files that don't have the same md5 sum
   If md5_log_error exists it will be deleted before beginning
-  if md5_log does not exist it will be created and populated 
+  if md5_log does not exist it will be created and populated   
 
 """
 import os, hashlib, sys, shutil
 md5 = hashlib.md5()
 d_dict = {}
 
+
 def create_log_file(file_w_path, logFile):
+  list_of_lines = ''
   rootDir = (os.path.abspath(file_w_path))
-  #find rootDir by parsing file_w_path and stripping the filename
   for dirName, subdirList, fileList in os.walk(rootDir):
     for fname in fileList:
       filename = os.path.join(dirName,fname)
@@ -26,19 +27,26 @@ def create_log_file(file_w_path, logFile):
       f.write(str(d_dict))
       f.write("\n")
   f.close()
-  print("%s files processed" % len(d_dict))
+  with open(logFile+".readable", 'w') as f:
+    f.close()
+  with open(logFile+".readable", 'a') as reprint:
+    for key in d_dict:
+      reprint.write(key+"\t"+d_dict[key]+"\n")
+  print("%s files processed." % len(d_dict))
 
 
 def check_files(*args):
   error = False
   rebuild_file = False
   result = "All Good"
+  error_detected = False
+  deleted_files = []
   rootDir = args[0]
   if len(args) < 2:
     sys.exit(get_help())
   else:
-    logFile = os.path.join(args[0], args[1])
-  md5_log_error = os.path.join(rootDir, logFile+"_error")
+    logFile = (os.path.join(args[0], args[1]))
+  md5_log_error = (os.path.join(rootDir, logFile+"_error"))
   if os.path.exists(md5_log_error):
     shutil.move(md5_log_error, os.path.join(rootDir, md5_log_error+".old"))
  #  os.remove(md5_log_error)
@@ -55,7 +63,7 @@ Running Now...\nThis file '%s',\nis very important and a backup may be a good id
     md5_log = eval(md5_log.read())
     for dirName, subdirList, fileList in os.walk(rootDir):
       for fname in fileList:
-        filename = os.path.join(dirName, fname)
+        filename = (os.path.join(dirName, fname))
         md5_dict[filename] = checksum_md5(filename)
         if not filename in md5_log:
           md5_dict[filename] = checksum_md5(filename)
@@ -65,23 +73,32 @@ Running Now...\nThis file '%s',\nis very important and a backup may be a good id
       for log_key in md5_log:
         if log_key in md5_dict:
           if not md5_log[log_key] == md5_dict[log_key]:
-            if not log_key == logFile:
-              with open(md5_log_error, "a") as b:
+            if log_key == (logFile+".readable") or log_key == (logFile+".old") \
+              or log_key == (logFile+".deleted")or log_key == (md5_log_error)\
+              or log_key == (__name__) or log_key == logFile:
+              break
+            with open(md5_log_error, "a") as b:
                 b.write(str(os.path.join(md5_log[log_key],log_key + "\n" )))
                 error = True
         else:
           if not log_key == md5_log_error:
-            print("\nThis file, has been deleted, since md5_log was generated %s\n" % log_key)
-          #later need to have this remove from the md5_log for later uses bug #5
+            error_detected = True
+            if not os.path.exists(logFile+".deleted"):
+              with open(logFile+".deleted", 'w') as f:
+                f.close()
+            with open(logFile+".deleted", 'a') as f:
+              f.write(log_key+"\n")
       if error == True:
         result = print("\nThere was an error.  See %s" % md5_log_error)
+      if error_detected == True:
+        print("\nAt least one file has been deleted since the initial run")
     else:
       result = print("\nNo files have changed under %s.\n\
 A new log was generated to capture any newly added or removed files." % rootDir)
   if rebuild_file == True:
     create_log_file(rootDir, logFile)
     sys.exit()
-  #return print(result)
+
 
 def checksum_md5(filename):
   import hashlib
